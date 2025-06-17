@@ -68,6 +68,11 @@ class Converter
         }
     }
 
+    private function isPartialTemplate(string $filename): bool
+    {
+        return str_ends_with($filename, '.part.twig');
+    }
+
     /**
      * 批量转换目录下的所有Twig模板
      *
@@ -84,7 +89,8 @@ class Converter
 
         $result = [
             'success' => [],
-            'failed' => []
+            'failed' => [],
+            'skipped' => [] // 添加跳过的文件列表
         ];
 
         // 确保目录路径以斜杠结尾
@@ -104,6 +110,13 @@ class Converter
 
             $sourcePath = $file->getRealPath();
             $relativePath = substr($sourcePath, strlen($sourceDir));
+            
+            // 检查是否为部分模板
+            if ($this->isPartialTemplate($file->getFilename())) {
+                $result['skipped'][] = $relativePath;
+                continue;
+            }
+
             $outputPath = $outputDir . substr($relativePath, 0, -5) . '.html';
 
             try {

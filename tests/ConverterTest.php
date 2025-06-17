@@ -76,6 +76,8 @@ class ConverterTest extends TestCase
         // 创建测试模板
         file_put_contents($sourceDir . '/test1.twig', 'Hello {{ name }}!');
         file_put_contents($sourceDir . '/subdir/test2.twig', 'Goodbye {{ name }}!');
+        file_put_contents($sourceDir . '/header.part.twig', 'Header {{ name }}');
+        file_put_contents($sourceDir . '/footer.part.twig', 'Footer {{ name }}');
         file_put_contents($sourceDir . '/not-a-template.txt', 'This is not a template');
 
         // 执行转换
@@ -84,10 +86,17 @@ class ConverterTest extends TestCase
         // 验证结果
         $this->assertCount(2, $result['success']);
         $this->assertCount(0, $result['failed']);
+        $this->assertCount(2, $result['skipped']); // 验证跳过的部分模板数量
         $this->assertFileExists($outputDir . '/test1.html');
         $this->assertFileExists($outputDir . '/subdir/test2.html');
+        $this->assertFileDoesNotExist($outputDir . '/header.html'); // 验证部分模板未被转换
+        $this->assertFileDoesNotExist($outputDir . '/footer.html'); // 验证部分模板未被转换
         $this->assertEquals('Hello World!', file_get_contents($outputDir . '/test1.html'));
         $this->assertEquals('Goodbye World!', file_get_contents($outputDir . '/subdir/test2.html'));
+
+        // 验证跳过的文件列表包含正确的文件
+        $this->assertContains('header.part.twig', $result['skipped']);
+        $this->assertContains('footer.part.twig', $result['skipped']);
     }
 
     public function testConvertWithInvalidTemplate(): void
