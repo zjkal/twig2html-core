@@ -110,4 +110,21 @@ class ConverterTest extends TestCase
         $this->expectException(\RuntimeException::class);
         $this->converter->convertDirectory('non-existent-dir', 'output-dir');
     }
+
+    public function testConvertPartialTemplate(): void
+    {
+        // 创建部分模板文件
+        $templateContent = 'Header {{ name }}';
+        $templateFile = $this->tempDir . '/header.part.twig';
+        file_put_contents($templateFile, $templateContent);
+
+        // 设置输出文件
+        $outputFile = $this->tempDir . '/header.html';
+
+        // 期望转换部分模板时抛出异常
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('不支持转换部分模板：' . $templateFile);
+        
+        $this->converter->convert($templateFile, $outputFile, ['name' => 'World']);
+    }
 }
