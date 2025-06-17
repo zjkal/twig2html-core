@@ -81,7 +81,7 @@ class ConverterTest extends TestCase
         file_put_contents($sourceDir . '/not-a-template.txt', 'This is not a template');
 
         // 执行转换
-        $result = $this->converter->convertDirectory($sourceDir, $outputDir, ['name' => 'World']);
+        $result = $this->converter->convertDirectory($sourceDir, $outputDir, null, ['name' => 'World']);
 
         // 验证结果
         $this->assertCount(2, $result['success']);
@@ -124,7 +124,75 @@ class ConverterTest extends TestCase
         // 期望转换部分模板时抛出异常
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('不支持转换部分模板：' . $templateFile);
-        
+
         $this->converter->convert($templateFile, $outputFile, ['name' => 'World']);
+    }
+
+    public function testConvertDirectoryWithDataFiles(): void
+    {
+        // 创建测试目录结构
+        $sourceDir = $this->tempDir . '/source';
+        $outputDir = $this->tempDir . '/output';
+        $dataDir = $this->tempDir . '/data';
+        mkdir($sourceDir);
+        mkdir($sourceDir . '/subdir');
+        mkdir($dataDir);
+        mkdir($dataDir . '/subdir');
+
+        // 创建测试模板
+        file_put_contents($sourceDir . '/test1.twig', 'Hello {{ name }}! {{ message }}');
+        file_put_contents($sourceDir . '/subdir/test2.twig', 'Goodbye {{ name }}! {{ message }}');
+
+        // 创建对应的数据文件
+        file_put_contents($dataDir . '/test1.php', '<?php return ["message" => "Welcome"];');
+        file_put_contents($dataDir . '/subdir/test2.php', '<?php return ["message" => "See you"];');
+
+        // 执行转换，设置全局变量和使用数据文件
+        $result = $this->converter->convertDirectory(
+            $sourceDir,
+            $outputDir,
+            $dataDir,
+            ['name' => 'World']
+        );
+
+        // 验证结果
+        $this->assertCount(2, $result['success']);
+        $this->assertCount(0, $result['failed']);
+        $this->assertFileExists($outputDir . '/test1.html');
+        $this->assertFileExists($outputDir . '/subdir/test2.html');
+        $this->assertEquals('Hello World! Welcome', file_get_contents($outputDir . '/test1.html'));
+        $this->assertEquals('Goodbye World! See you', file_get_contents($outputDir . '/subdir/test2.html'));
+
+        // 测试使用不存在的数据目录
+        $result = $this->converter->convertDirectory(
+            $sourceDir,
+            $outputDir,
+            'non-existent-data-dir',
+            ['name' => 'World', 'message' => 'Default']
+        );
+
+        // 验证结果 - 应该使用全局变量
+        $this->assertCount(2, $result['success']);
+        $this->assertCount(0, $result['failed']);
+        $this->assertEquals('Hello World! Default', file_get_contents($outputDir . '/test1.html'));
+        $this->assertEquals('Goodbye World! Default', file_get_contents($outputDir . '/subdir/test2.html'));
+
+        // 删除数据文件
+        unlink($dataDir . '/test1.php');
+        unlink($dataDir . '/subdir/test2.php');
+
+        // 测试数据文件不存在的情况
+        $result = $this->converter->convertDirectory(
+            $sourceDir,
+            $outputDir,
+            $dataDir,
+            ['name' => 'World', 'message' => 'Fallback']
+        );
+
+        // 验证结果 - 应该使用全局变量
+        $this->assertCount(2, $result['success']);
+        $this->assertCount(0, $result['failed']);
+        $this->assertEquals('Hello World! Fallback', file_get_contents($outputDir . '/test1.html'));
+        $this->assertEquals('Goodbye World! Fallback', file_get_contents($outputDir . '/subdir/test2.html'));
     }
 }

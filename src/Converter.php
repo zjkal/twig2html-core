@@ -45,6 +45,11 @@ class Converter
                 throw new \RuntimeException("模板文件不存在：{$templatePath}");
             }
 
+            // 检查是否为部分模板
+            if ($this->isPartialTemplate(basename($templatePath))) {
+                throw new \RuntimeException("不支持转换部分模板：{$templatePath}");
+            }
+
             // 获取模板目录和文件名
             $templateDir = dirname($templatePath);
             $templateName = basename($templatePath);
@@ -80,10 +85,11 @@ class Converter
      *
      * @param string $sourceDir 源目录
      * @param string $outputDir 输出目录
-     * @param array $variables 全局变量
+     * @param string|null $dataDir 数据目录，存放与模板同名的PHP数据文件
+     * @param array $globalVariables 全局变量
      * @return array 转换结果，包含成功和失败的文件列表
      */
-    public function convertDirectory(string $sourceDir, string $outputDir, array $variables = []): array
+    public function convertDirectory(string $sourceDir, string $outputDir, ?string $dataDir = null, array $globalVariables = []): array
     {
         if (!is_dir($sourceDir)) {
             throw new \RuntimeException("源目录不存在：{$sourceDir}");
@@ -98,6 +104,9 @@ class Converter
         // 确保目录路径以斜杠结尾
         $sourceDir = rtrim($sourceDir, '/\\') . DIRECTORY_SEPARATOR;
         $outputDir = rtrim($outputDir, '/\\') . DIRECTORY_SEPARATOR;
+        if ($dataDir) {
+            $dataDir = rtrim($dataDir, '/\\') . DIRECTORY_SEPARATOR;
+        }
 
         // 递归获取所有.twig文件
         $files = new \RecursiveIteratorIterator(
@@ -120,6 +129,18 @@ class Converter
             }
 
             $outputPath = $outputDir . substr($relativePath, 0, -5) . '.html';
+
+            // 获取模板对应的数据文件
+            $variables = $globalVariables;
+            if ($dataDir && is_dir($dataDir)) {
+                $dataFile = $dataDir . substr($relativePath, 0, -5) . '.php';
+                if (file_exists($dataFile)) {
+                    $templateData = require $dataFile;
+                    if (is_array($templateData)) {
+                        $variables = array_merge($variables, $templateData);
+                    }
+                }
+            }
 
             try {
                 if ($this->convert($sourcePath, $outputPath, $variables)) {

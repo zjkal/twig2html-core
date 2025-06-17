@@ -28,20 +28,50 @@ $converter->convert(
 ### 目录批量转换
 
 ```php
-use zjkal\twig2html\core\Converter;
-
-$converter = new Converter();
+$converter = new \Zjkal\Twig2HtmlCore\Converter();
 $result = $converter->convertDirectory(
-    'path/to/templates',
-    'path/to/output',
-    ['name' => 'World']
+    'templates',     // Twig模板目录
+    'output',        // 输出目录
+    'data',          // 数据目录（可选），存放与模板同名的PHP数据文件，目录不存在时使用全局变量
+    ['name' => 'World'] // 全局变量（可选）
 );
 
-// 查看转换结果
-print_r($result['success']); // 成功转换的文件列表
-print_r($result['failed']); // 转换失败的文件列表
-print_r($result['skipped']); // 被跳过的部分模板文件列表
+// 转换结果
+var_dump($result['success']); // 成功转换的文件列表
+var_dump($result['failed']);  // 转换失败的文件列表
+var_dump($result['skipped']); // 跳过的部分模板文件列表
 ```
+
+#### 数据文件
+
+数据文件是与Twig模板同名的PHP文件，用于为模板提供变量数据。当数据目录或数据文件不存在时，将仅使用全局变量进行渲染。
+
+目录结构示例：
+
+```plaintext
+templates/
+  ├── page.twig          # 模板文件
+  └── subdir/
+      └── about.twig     # 子目录中的模板文件
+
+data/
+  ├── page.php          # 对应page.twig的数据文件
+  └── subdir/
+      └── about.php     # 对应about.twig的数据文件
+```
+
+数据文件的内容示例：
+
+```php
+<?php
+return [
+    'title' => '页面标题',
+    'content' => '页面内容',
+    // ... 其他变量
+];
+```
+
+数据文件必须返回一个数组，其中的变量将与全局变量合并后传递给对应的模板。如果同一个变量同时存在于数据文件和全局变量中，数据文件中的值将覆盖全局变量中的值。如果数据目录或数据文件不存在，则只使用全局变量进行渲染。
 
 ### 部分模板命名规范
 
