@@ -45,11 +45,6 @@ class Converter
                 throw new \RuntimeException("模板文件不存在：{$templatePath}");
             }
 
-            // 检查是否为部分模板
-            if ($this->isPartialTemplate(basename($templatePath))) {
-                throw new \RuntimeException("不支持转换部分模板：{$templatePath}");
-            }
-
             // 获取模板目录和文件名
             $templateDir = dirname($templatePath);
             $templateName = basename($templatePath);
@@ -76,7 +71,8 @@ class Converter
 
     private function isPartialTemplate(string $filename): bool
     {
-        return str_ends_with($filename, '.part.twig');
+        $suffix = '.part.twig';
+        return substr($filename, -strlen($suffix)) === $suffix;
     }
 
     /**
