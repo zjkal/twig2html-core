@@ -98,7 +98,7 @@ class Converter
 
         $result = [
             'success' => [],
-            'failed'  => [],
+            'failed' => [],
             'skipped' => [] // 添加跳过的文件列表
         ];
 
@@ -125,7 +125,7 @@ class Converter
 
             // 检查是否为部分模板
             if ($this->isPartialTemplate($file->getFilename())) {
-                $result['skipped'][] = $relativePath;
+                $result['skipped'][] = '📝' . basename($sourceDir) . '/' . $relativePath;
                 continue;
             }
 
@@ -133,24 +133,32 @@ class Converter
 
             // 获取模板对应的数据文件
             $variables = $globalVariables;
+            $dataFilePath = null;
             if ($dataDir && is_dir($dataDir)) {
                 $dataFile = $dataDir . substr($relativePath, 0, -5) . '.php';
                 if (file_exists($dataFile)) {
                     $templateData = require $dataFile;
                     if (is_array($templateData)) {
                         $variables = array_merge($variables, $templateData);
+                        $dataFilePath = substr($dataFile, strlen($dataDir));
                     }
                 }
             }
 
             try {
                 if ($this->convert($sourcePath, $outputPath, $variables)) {
-                    $result['success'][] = $relativePath;
+                    // 格式化成功信息
+                    $successInfo = '📝' . basename($sourceDir) . '/' . $relativePath;
+                    if ($dataFilePath) {
+                        $successInfo .= ' + 📊' . basename($dataDir) . '/' . $dataFilePath;
+                    }
+                    $successInfo .= ' => 📄' . basename($outputDir) . '/' . substr($outputPath, strlen($outputDir));
+                    $result['success'][] = $successInfo;
                 } else {
-                    $result['failed'][] = $relativePath;
+                    $result['failed'][] = '📝' . basename($sourceDir) . '/' . $relativePath;
                 }
             } catch (\Exception $e) {
-                $result['failed'][] = $relativePath;
+                $result['failed'][] = '📝' . basename($sourceDir) . '/' . $relativePath;
             }
         }
 
